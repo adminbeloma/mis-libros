@@ -443,6 +443,8 @@ window._fb = {
   collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy
 };
 window._WORKER_URL = WORKER_URL;
+window._firebaseReady = true;
+window.dispatchEvent(new Event('firebase-ready'));
 </script>
 
 <script>
@@ -477,17 +479,21 @@ document.getElementById('login-email').addEventListener('keydown', e=>{
 
 function cerrarSesion(){ window._fb.signOut(window._auth); }
 
-window._fb.onAuthStateChanged(window._auth, (user)=>{
-  if(user){
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    document.getElementById('quien-soy').textContent = user.email;
-    suscribirLibros();
-  } else {
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
-  }
-});
+function _wireAuth(){
+  window._fb.onAuthStateChanged(window._auth, (user)=>{
+    if(user){
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('quien-soy').textContent = user.email;
+      suscribirLibros();
+    } else {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    }
+  });
+}
+if(window._firebaseReady){ _wireAuth(); }
+else { window.addEventListener('firebase-ready', _wireAuth); }
 
 // ===== FIRESTORE: lectura en tiempo real =====
 function suscribirLibros(){

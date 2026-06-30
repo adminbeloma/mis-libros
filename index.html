@@ -467,6 +467,9 @@ import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
   onSnapshot, serverTimestamp, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getStorage, ref, uploadBytes, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBfDpqi--XRe7EbmU6arLVgNTv9h8D1WeI",
@@ -480,15 +483,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-const WORKER_URL = "https://mis-libros-drive-proxy.fcristerna1.workers.dev";
-
-window._auth = auth; window._db = db;
+window._auth = auth; window._db = db; window._storage = storage;
 window._fb = {
   signInWithEmailAndPassword, onAuthStateChanged, signOut,
-  collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy
+  collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy,
+  ref, uploadBytes, getDownloadURL, deleteObject
 };
-window._WORKER_URL = WORKER_URL;
 window._firebaseReady = true;
 window.dispatchEvent(new Event('firebase-ready'));
 </script>
@@ -691,20 +693,15 @@ async function onPortadaFileSeleccionada(e){
   fill.style.width = '20%';
 
   try{
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('filename', file.name);
+    const nombreUnico = `portadas/${Date.now()}_${file.name}`;
+    const storageRef = window._fb.ref(window._storage, nombreUnico);
     fill.style.width = '55%';
-
-    const res = await fetch(window._WORKER_URL + '/upload', { method: 'POST', body: formData });
-    fill.style.width = '90%';
-    const data = await res.json();
+    await window._fb.uploadBytes(storageRef, file);
+    fill.style.width = '85%';
+    const urlPublica = await window._fb.getDownloadURL(storageRef);
     fill.style.width = '100%';
     setTimeout(()=>progressBar.classList.remove('show'), 500);
 
-    if(!data.id){ throw new Error('No se pudo subir la imagen'); }
-
-    const urlPublica = `https://drive.google.com/uc?export=view&id=${data.id}`;
     document.getElementById('libro-portada-url').value = urlPublica;
     actualizarPreviewPortada();
     toast('Portada subida correctamente');
@@ -756,6 +753,7 @@ function abrirModalEditar(libro){
     document.getElementById('pdf-zone-text').textContent = '📄 ' + (libro.pdfNombre || 'PDF cargado') + ' — clic para reemplazar';
     zone.dataset.pdfId = libro.pdfId;
     zone.dataset.pdfNombre = libro.pdfNombre || '';
+    zone.dataset.pdfUrl = libro.pdfUrl || '';
   } else {
     zone.classList.remove('has-file');
     document.getElementById('pdf-zone-text').textContent = 'Clic para elegir un PDF';
@@ -825,6 +823,7 @@ async function guardarLibro(){
   if(zone.dataset.pdfId){
     datos.pdfId = zone.dataset.pdfId;
     datos.pdfNombre = zone.dataset.pdfNombre;
+    datos.pdfUrl = zone.dataset.pdfUrl || null;
   }
 
   try{
@@ -833,6 +832,7 @@ async function guardarLibro(){
       if(subido && subido.id){
         datos.pdfId = subido.id;
         datos.pdfNombre = subido.name || pdfFileSeleccionado.name;
+        datos.pdfUrl = subido.url;
       }
     }
 
@@ -855,28 +855,22 @@ async function subirPdfADrive(file){
   const progressBar = document.getElementById('upload-progress');
   const fill = document.getElementById('upload-progress-fill');
   progressBar.classList.add('show');
-  fill.style.width = '15%';
+  fill.style.width = '20%';
 
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('filename', file.name);
-
-  fill.style.width = '50%';
-
-  const res = await fetch(window._WORKER_URL + '/upload', {
-    method: 'POST',
-    body: formData
-  });
-
-  fill.style.width = '90%';
-  const data = await res.json();
-  fill.style.width = '100%';
-  setTimeout(()=>progressBar.classList.remove('show'), 600);
-
-  if(!data.id){
-    throw new Error('No se pudo subir el PDF: ' + JSON.stringify(data));
+  try{
+    const nombreUnico = `pdfs/${Date.now()}_${file.name}`;
+    const storageRef = window._fb.ref(window._storage, nombreUnico);
+    fill.style.width = '50%';
+    await window._fb.uploadBytes(storageRef, file);
+    fill.style.width = '85%';
+    const url = await window._fb.getDownloadURL(storageRef);
+    fill.style.width = '100%';
+    setTimeout(()=>progressBar.classList.remove('show'), 500);
+    return { id: nombreUnico, url, name: file.name };
+  }catch(err){
+    progressBar.classList.remove('show');
+    throw new Error('No se pudo subir el PDF: ' + err.message);
   }
-  return data;
 }
 
 async function eliminarLibroRapido(event, id, titulo){
@@ -921,10 +915,10 @@ function abrirDetalle(id){
     : '—';
 
   const pdfActions = document.getElementById('detalle-pdf-actions');
-  if(libro.pdfId){
+  if(libro.pdfId && libro.pdfUrl){
     pdfActions.innerHTML = `
-      <a class="btn-pdf" href="https://drive.google.com/file/d/${libro.pdfId}/view" target="_blank">📖 Leer PDF</a>
-      <a class="btn-pdf" href="https://drive.google.com/uc?export=download&id=${libro.pdfId}" target="_blank">⬇ Descargar</a>
+      <a class="btn-pdf" href="${libro.pdfUrl}" target="_blank">📖 Leer PDF</a>
+      <a class="btn-pdf" href="${libro.pdfUrl}" download="${escHtml(libro.pdfNombre||'libro.pdf')}" target="_blank">⬇ Descargar</a>
     `;
   } else {
     pdfActions.innerHTML = '';

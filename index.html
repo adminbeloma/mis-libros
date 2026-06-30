@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis Libros — Biblioteca Personal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F2ECDD;
+    --paper-2:#E8DFC8;
+    --ink:#2B2420;
+    --ink-soft:#6B5E4F;
+    --spine:#7C3F2E;
+    --spine-dark:#5C2D20;
+    --gold:#A9842C;
+    --border:#D8CBA8;
+    --card:#FBF7EC;
+    --shadow: 0 2px 8px rgba(43,36,32,.08);
+    --shadow-lg: 0 12px 32px rgba(43,36,32,.18);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Source Sans 3',sans-serif;}
+  body::before{
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(124,63,46,.04), transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(169,132,44,.05), transparent 40%);
+  }
+  h1,h2,h3{font-family:'Fraunces',serif;}
+  a{color:inherit;text-decoration:none;}
+
+  /* ===== LOGIN ===== */
+  #login-screen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    position:relative;z-index:1;padding:24px;
+  }
+  .login-box{
+    background:var(--card);border:1px solid var(--border);border-radius:4px;
+    padding:48px 40px;max-width:380px;width:100%;box-shadow:var(--shadow-lg);
+    position:relative;
+  }
+  .login-box::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:6px;
+    background:linear-gradient(180deg,var(--spine),var(--spine-dark));
+  }
+  .login-emblem{font-size:13px;letter-spacing:.18em;color:var(--gold);text-transform:uppercase;font-weight:600;margin-bottom:6px;}
+  .login-box h1{font-size:32px;margin:0 0 6px;color:var(--ink);}
+  .login-box p.sub{color:var(--ink-soft);font-size:14px;margin:0 0 28px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;letter-spacing:.03em;text-transform:uppercase;}
+  .field input{
+    width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:3px;
+    font-size:15px;background:#fff;color:var(--ink);outline:none;font-family:inherit;
+    transition:border-color .15s;
+  }
+  .field input:focus{border-color:var(--spine);}
+  .btn-primary{
+    width:100%;padding:13px;background:var(--spine);color:#fff;border:none;border-radius:3px;
+    font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.02em;
+    transition:background .15s;margin-top:8px;
+  }
+  .btn-primary:hover{background:var(--spine-dark);}
+  .login-error{color:#9B3A2B;font-size:13px;margin-top:14px;display:none;}
+
+  /* ===== APP SHELL ===== */
+  #app{display:none;min-height:100vh;position:relative;z-index:1;}
+  header.topbar{
+    background:var(--ink);color:var(--paper);padding:18px 32px;
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+    border-bottom:4px solid var(--spine);
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .mark{font-size:22px;}
+  .brand h1{font-size:20px;margin:0;color:var(--paper);letter-spacing:.01em;}
+  .brand .tag{font-size:11px;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-top:2px;}
+  .topbar-actions{display:flex;align-items:center;gap:14px;}
+  .who{font-size:13px;color:#C9BFA9;}
+  .btn-ghost{
+    background:transparent;border:1px solid #564B3E;color:var(--paper);padding:8px 16px;
+    border-radius:3px;font-size:13px;cursor:pointer;font-family:inherit;
+  }
+  .btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+  .btn-add{
+    background:var(--gold);color:var(--ink);border:none;padding:9px 18px;border-radius:3px;
+    font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;
+  }
+  .btn-add:hover{background:#C29B3A;}
+
+  main{max-width:1280px;margin:0 auto;padding:32px;}
+
+  .toolbar{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:28px;align-items:center;}
+  .search-wrap{flex:1;min-width:220px;position:relative;}
+  .search-wrap input{
+    width:100%;padding:11px 14px 11px 38px;border:1.5px solid var(--border);border-radius:3px;
+    background:var(--card);font-size:14px;font-family:inherit;outline:none;color:var(--ink);
+  }
+  .search-wrap input:focus{border-color:var(--spine);}
+  .search-wrap .icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--ink-soft);font-size:14px;}
+  select.filter{
+    padding:11px 14px;border:1.5px solid var(--border);border-radius:3px;background:var(--card);
+    font-size:14px;font-family:inherit;color:var(--ink);outline:none;cursor:pointer;
+  }
+  .count-pill{font-size:12px;color:var(--ink-soft);white-space:nowrap;}
+
+  .empty-state{
+    text-align:center;padding:80px 20px;color:var(--ink-soft);
+  }
+  .empty-state .ico{font-size:48px;margin-bottom:16px;opacity:.5;}
+  .empty-state h3{color:var(--ink);margin:0 0 8px;}
+
+  .grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:22px;
+  }
+  .book-card{
+    background:var(--card);border:1px solid var(--border);border-radius:3px;cursor:pointer;
+    overflow:hidden;transition:transform .15s, box-shadow .15s;box-shadow:var(--shadow);
+  }
+  .book-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);}
+  .book-cover{
+    width:100%;aspect-ratio:2/3;background:var(--paper-2);position:relative;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .book-cover img{width:100%;height:100%;object-fit:cover;display:block;}
+  .book-cover .placeholder{font-family:'Fraunces',serif;font-size:13px;color:var(--ink-soft);text-align:center;padding:14px;line-height:1.3;}
+  .pdf-tag{
+    position:absolute;top:8px;right:8px;background:var(--spine);color:#fff;font-size:10px;
+    font-weight:700;padding:3px 7px;border-radius:2px;letter-spacing:.05em;
+  }
+  .book-info{padding:12px 12px 14px;}
+  .book-title{font-family:'Fraunces',serif;font-size:14.5px;font-weight:600;line-height:1.25;margin:0 0 4px;
+    color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .book-author{font-size:12px;color:var(--ink-soft);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .book-meta-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+  .genre-chip{font-size:10px;background:var(--paper-2);color:var(--ink-soft);padding:2px 7px;border-radius:10px;
+    text-transform:uppercase;letter-spacing:.03em;font-weight:600;}
+  .year-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);font-weight:600;}
+
+  /* ===== MODAL ===== */
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(43,36,32,.6);z-index:100;
+    align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    background:var(--card);border-radius:4px;max-width:760px;width:100%;max-height:88vh;
+    overflow-y:auto;box-shadow:var(--shadow-lg);position:relative;
+  }
+  .modal-header{
+    padding:24px 28px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;
+    position:sticky;top:0;background:var(--card);z-index:2;
+  }
+  .modal-header h2{margin:0;font-size:22px;}
+  .modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-soft);line-height:1;padding:4px;}
+  .modal-close:hover{color:var(--spine);}
+  .modal-body{padding:28px;}
+
+  /* form */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .form-grid .full{grid-column:1/-1;}
+  .field-sm label{display:block;font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;text-transform:uppercase;letter-spacing:.03em;}
+  .field-sm input, .field-sm select{
+    width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:3px;font-size:14px;
+    background:#fff;font-family:inherit;outline:none;color:var(--ink);
+  }
+  .field-sm input:focus, .field-sm select:focus{border-color:var(--spine);}
+  .search-google-row{display:flex;gap:8px;}
+  .search-google-row input{flex:1;}
+  .btn-search{
+    background:var(--ink);color:var(--paper);border:none;padding:10px 16px;border-radius:3px;
+    font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;
+  }
+  .btn-search:hover{background:var(--spine-dark);}
+  .gbooks-results{margin-top:10px;max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:3px;display:none;}
+  .gbooks-results.show{display:block;}
+  .gbooks-item{display:flex;gap:10px;padding:10px;border-bottom:1px solid var(--border);cursor:pointer;}
+  .gbooks-item:last-child{border-bottom:none;}
+  .gbooks-item:hover{background:var(--paper-2);}
+  .gbooks-item img{width:36px;height:52px;object-fit:cover;border-radius:2px;background:var(--paper-2);flex-shrink:0;}
+  .gbooks-item .gi-title{font-weight:600;font-size:13px;line-height:1.3;}
+  .gbooks-item .gi-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+
+  .cover-preview{
+    width:100%;aspect-ratio:2/3;background:var(--paper-2);border-radius:3px;overflow:hidden;
+    display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--border);
+  }
+  .cover-preview img{width:100%;height:100%;object-fit:cover;}
+  .cover-preview .ph{font-size:12px;color:var(--ink-soft);text-align:center;padding:10px;}
+
+  .pdf-upload-zone{
+    border:1.5px dashed var(--border);border-radius:3px;padding:18px;text-align:center;
+    background:var(--paper);cursor:pointer;font-size:13px;color:var(--ink-soft);
+  }
+  .pdf-upload-zone:hover{border-color:var(--spine);}
+  .pdf-upload-zone.has-file{border-color:var(--gold);color:var(--ink);background:#FBF3DC;}
+  .progress-bar{height:5px;background:var(--paper-2);border-radius:3px;overflow:hidden;margin-top:8px;display:none;}
+  .progress-bar.show{display:block;}
+  .progress-bar .fill{height:100%;background:var(--gold);width:0%;transition:width .2s;}
+
+  .modal-footer{
+    padding:20px 28px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;
+    position:sticky;bottom:0;background:var(--card);
+  }
+  .btn-danger{background:none;border:1.5px solid #9B3A2B;color:#9B3A2B;padding:10px 18px;border-radius:3px;
+    font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .btn-danger:hover{background:#9B3A2B;color:#fff;}
+  .btn-save{background:var(--spine);color:#fff;border:none;padding:10px 22px;border-radius:3px;
+    font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .btn-save:hover{background:var(--spine-dark);}
+  .footer-right{display:flex;gap:10px;}
+
+  /* detail view */
+  .detail-grid{display:grid;grid-template-columns:200px 1fr;gap:28px;}
+  .detail-cover{width:100%;border-radius:3px;box-shadow:var(--shadow);}
+  .detail-meta dt{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);font-weight:600;margin-top:14px;}
+  .detail-meta dt:first-child{margin-top:0;}
+  .detail-meta dd{margin:3px 0 0;font-size:15px;}
+  .pdf-actions{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;}
+  .btn-pdf{
+    background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:3px;font-size:13px;
+    font-weight:600;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn-pdf:hover{background:var(--spine-dark);}
+
+  .toast{
+    position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--paper);padding:14px 20px;
+    border-radius:4px;font-size:14px;box-shadow:var(--shadow-lg);z-index:200;display:none;
+    border-left:4px solid var(--gold);
+  }
+  .toast.show{display:block;animation:slideIn .25s ease;}
+  @keyframes slideIn{from{transform:translateY(10px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+
+  @media(max-width:640px){
+    .form-grid{grid-template-columns:1fr;}
+    .detail-grid{grid-template-columns:1fr;}
+    .detail-cover{max-width:160px;margin:0 auto;}
+    main{padding:18px;}
+    header.topbar{padding:14px 18px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-emblem">Biblioteca privada</div>
+    <h1>Mis Libros</h1>
+    <p class="sub">Inicia sesión para ver tu colección.</p>
+    <div class="field">
+      <label>Correo</label>
+      <input type="email" id="login-email" placeholder="tu@correo.com">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="login-password" placeholder="••••••••">
+    </div>
+    <button class="btn-primary" onclick="iniciarSesion()">Entrar</button>
+    <p class="login-error" id="login-error">Correo o contraseña incorrectos.</p>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">📚</span>
+      <div>
+        <h1>Mis Libros</h1>
+        <div class="tag">Biblioteca Personal</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span class="who" id="quien-soy"></span>
+      <button class="btn-add" onclick="abrirModalNuevo()">＋ Agregar libro</button>
+      <button class="btn-ghost" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="icon">🔍</span>
+        <input type="text" id="buscar-libro" placeholder="Buscar por título o autor..." oninput="renderLibros()">
+      </div>
+      <select class="filter" id="filtro-genero" onchange="renderLibros()">
+        <option value="">Todos los géneros</option>
+      </select>
+      <select class="filter" id="filtro-orden" onchange="renderLibros()">
+        <option value="reciente">Más recientes</option>
+        <option value="titulo">Título A-Z</option>
+        <option value="autor">Autor A-Z</option>
+        <option value="anio">Año</option>
+      </select>
+      <span class="count-pill" id="contador-libros"></span>
+    </div>
+
+    <div id="grid-libros" class="grid"></div>
+    <div id="empty-state" class="empty-state" style="display:none;">
+      <div class="ico">📖</div>
+      <h3>Tu biblioteca está vacía</h3>
+      <p>Agrega tu primer libro para empezar tu colección.</p>
+    </div>
+  </main>
+</div>
+
+<!-- ===== MODAL: AGREGAR / EDITAR ===== -->
+<div class="modal-overlay" id="modal-libro">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="modal-titulo">Agregar libro</h2>
+      <button class="modal-close" onclick="cerrarModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="field-sm full" style="margin-bottom:18px;">
+        <label>Buscar en Google Books (autocompleta los datos)</label>
+        <div class="search-google-row">
+          <input type="text" id="gbooks-query" placeholder="Título, autor o ISBN..." onkeydown="if(event.key==='Enter'){event.preventDefault();buscarGoogleBooks();}">
+          <button class="btn-search" onclick="buscarGoogleBooks()">Buscar</button>
+        </div>
+        <div class="gbooks-results" id="gbooks-results"></div>
+      </div>
+
+      <div class="form-grid">
+        <div class="field-sm full">
+          <label>Portada</label>
+          <div class="cover-preview" id="cover-preview">
+            <span class="ph">Sin portada — búscala arriba o pega una URL</span>
+          </div>
+          <input type="text" id="libro-portada-url" placeholder="URL de la portada" style="margin-top:8px;" oninput="actualizarPreviewPortada()">
+        </div>
+
+        <div class="field-sm full">
+          <label>Título *</label>
+          <input type="text" id="libro-titulo" placeholder="Título del libro">
+        </div>
+
+        <div class="field-sm">
+          <label>Autor</label>
+          <input type="text" id="libro-autor" placeholder="Nombre del autor">
+        </div>
+
+        <div class="field-sm">
+          <label>Editorial</label>
+          <input type="text" id="libro-editorial" placeholder="Editorial">
+        </div>
+
+        <div class="field-sm">
+          <label>Año</label>
+          <input type="number" id="libro-anio" placeholder="2024">
+        </div>
+
+        <div class="field-sm">
+          <label>Número de páginas</label>
+          <input type="number" id="libro-paginas" placeholder="320">
+        </div>
+
+        <div class="field-sm full">
+          <label>Género</label>
+          <input type="text" id="libro-genero" placeholder="Ficción, Historia, Negocios...">
+        </div>
+
+        <div class="field-sm full">
+          <label>Archivo PDF (opcional)</label>
+          <div class="pdf-upload-zone" id="pdf-drop-zone" onclick="document.getElementById('pdf-input').click()">
+            <span id="pdf-zone-text">Clic para elegir un PDF</span>
+          </div>
+          <input type="file" id="pdf-input" accept="application/pdf" style="display:none;" onchange="onPdfSeleccionado(event)">
+          <div class="progress-bar" id="upload-progress"><div class="fill" id="upload-progress-fill"></div></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" id="btn-eliminar-libro" style="display:none;" onclick="eliminarLibro()">Eliminar libro</button>
+      <div class="footer-right">
+        <button class="btn-ghost" style="color:var(--ink);border-color:var(--border);" onclick="cerrarModal()">Cancelar</button>
+        <button class="btn-save" onclick="guardarLibro()">Guardar libro</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: DETALLE ===== -->
+<div class="modal-overlay" id="modal-detalle">
+  <div class="modal-box" style="max-width:680px;">
+    <div class="modal-header">
+      <h2 id="detalle-titulo">Título</h2>
+      <button class="modal-close" onclick="cerrarDetalle()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <img id="detalle-portada" class="detail-cover" src="" alt="">
+        <dl class="detail-meta">
+          <dt>Autor</dt><dd id="detalle-autor">—</dd>
+          <dt>Editorial</dt><dd id="detalle-editorial">—</dd>
+          <dt>Año</dt><dd id="detalle-anio">—</dd>
+          <dt>Páginas</dt><dd id="detalle-paginas">—</dd>
+          <dt>Género</dt><dd id="detalle-genero">—</dd>
+          <div class="pdf-actions" id="detalle-pdf-actions"></div>
+        </dl>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div></div>
+      <button class="btn-save" onclick="editarDesdeDetalle()">Editar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+  onSnapshot, serverTimestamp, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBfDpqi--XRe7EbmU6arLVgNTv9h8D1WeI",
+  authDomain: "mis-libros-2a6b2.firebaseapp.com",
+  projectId: "mis-libros-2a6b2",
+  storageBucket: "mis-libros-2a6b2.firebasestorage.app",
+  messagingSenderId: "244179222687",
+  appId: "1:244179222687:web:2f45cb62afda0a2bc2e2aa"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const WORKER_URL = "https://mis-libros-drive-proxy.fcristerna1.workers.dev";
+
+window._auth = auth; window._db = db;
+window._fb = {
+  signInWithEmailAndPassword, onAuthStateChanged, signOut,
+  collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy
+};
+window._WORKER_URL = WORKER_URL;
+</script>
+
+<script>
+let libros = [];
+let libroEditandoId = null;
+let pdfFileSeleccionado = null;
+let gbooksSeleccionado = null;
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ===== AUTH =====
+function iniciarSesion(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  if(!email || !pass){ errEl.textContent = 'Completa correo y contraseña.'; errEl.style.display='block'; return; }
+  window._fb.signInWithEmailAndPassword(window._auth, email, pass)
+    .catch(()=>{ errEl.textContent = 'Correo o contraseña incorrectos.'; errEl.style.display='block'; });
+}
+document.getElementById('login-password').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') iniciarSesion();
+});
+document.getElementById('login-email').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') document.getElementById('login-password').focus();
+});
+
+function cerrarSesion(){ window._fb.signOut(window._auth); }
+
+window._fb.onAuthStateChanged(window._auth, (user)=>{
+  if(user){
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('quien-soy').textContent = user.email;
+    suscribirLibros();
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+});
+
+// ===== FIRESTORE: lectura en tiempo real =====
+function suscribirLibros(){
+  const q = window._fb.query(window._fb.collection(window._db, 'libros'), window._fb.orderBy('creado', 'desc'));
+  window._fb.onSnapshot(q, (snap)=>{
+    libros = [];
+    snap.forEach(d => libros.push({ id: d.id, ...d.data() }));
+    actualizarFiltroGeneros();
+    renderLibros();
+  }, (err)=>{
+    console.error(err);
+    toast('Error al cargar la biblioteca');
+  });
+}
+
+function actualizarFiltroGeneros(){
+  const select = document.getElementById('filtro-genero');
+  const valorActual = select.value;
+  const generos = [...new Set(libros.map(l => (l.genero||'').trim()).filter(Boolean))].sort();
+  select.innerHTML = '<option value="">Todos los géneros</option>' +
+    generos.map(g => `<option value="${g}">${g}</option>`).join('');
+  select.value = valorActual;
+}
+
+// ===== RENDER =====
+function renderLibros(){
+  const texto = document.getElementById('buscar-libro').value.toLowerCase().trim();
+  const genero = document.getElementById('filtro-genero').value;
+  const orden = document.getElementById('filtro-orden').value;
+
+  let filtrados = libros.filter(l=>{
+    const matchTexto = !texto || (l.titulo||'').toLowerCase().includes(texto) || (l.autor||'').toLowerCase().includes(texto);
+    const matchGenero = !genero || l.genero === genero;
+    return matchTexto && matchGenero;
+  });
+
+  if(orden === 'titulo') filtrados.sort((a,b)=>(a.titulo||'').localeCompare(b.titulo||''));
+  else if(orden === 'autor') filtrados.sort((a,b)=>(a.autor||'').localeCompare(b.autor||''));
+  else if(orden === 'anio') filtrados.sort((a,b)=>(b.anio||0)-(a.anio||0));
+  // 'reciente' ya viene ordenado de Firestore
+
+  const grid = document.getElementById('grid-libros');
+  const empty = document.getElementById('empty-state');
+  document.getElementById('contador-libros').textContent = `${filtrados.length} libro${filtrados.length===1?'':'s'}`;
+
+  if(filtrados.length === 0){
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    empty.querySelector('h3').textContent = libros.length === 0 ? 'Tu biblioteca está vacía' : 'Sin resultados';
+    empty.querySelector('p').textContent = libros.length === 0 ? 'Agrega tu primer libro para empezar tu colección.' : 'Intenta con otro título, autor o filtro.';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML = filtrados.map(l => `
+    <div class="book-card" onclick="abrirDetalle('${l.id}')">
+      <div class="book-cover">
+        ${l.portada ? `<img src="${l.portada}" alt="${escHtml(l.titulo)}" loading="lazy">` : `<span class="placeholder">${escHtml(l.titulo||'Sin título')}</span>`}
+        ${l.pdfId ? '<span class="pdf-tag">PDF</span>' : ''}
+      </div>
+      <div class="book-info">
+        <p class="book-title">${escHtml(l.titulo||'Sin título')}</p>
+        <p class="book-author">${escHtml(l.autor||'Autor desconocido')}</p>
+        <div class="book-meta-row">
+          ${l.genero ? `<span class="genre-chip">${escHtml(l.genero)}</span>` : '<span></span>'}
+          ${l.anio ? `<span class="year-tag">${l.anio}</span>` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ===== GOOGLE BOOKS =====
+async function buscarGoogleBooks(){
+  const query = document.getElementById('gbooks-query').value.trim();
+  if(!query) return;
+  const resultsEl = document.getElementById('gbooks-results');
+  resultsEl.innerHTML = '<div class="gbooks-item">Buscando...</div>';
+  resultsEl.classList.add('show');
+  try{
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=8`);
+    const data = await res.json();
+    const items = data.items || [];
+    if(items.length === 0){
+      resultsEl.innerHTML = '<div class="gbooks-item">Sin resultados. Llena los datos manualmente.</div>';
+      return;
+    }
+    resultsEl.innerHTML = items.map((item, i) => {
+      const info = item.volumeInfo || {};
+      const img = info.imageLinks ? (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail) : '';
+      return `
+        <div class="gbooks-item" onclick="seleccionarGoogleBook(${i})">
+          <img src="${img}" onerror="this.style.display='none'">
+          <div>
+            <div class="gi-title">${escHtml(info.title||'Sin título')}</div>
+            <div class="gi-sub">${escHtml((info.authors||[]).join(', ') || 'Autor desconocido')} ${info.publishedDate ? '· '+info.publishedDate.slice(0,4) : ''}</div>
+          </div>
+        </div>`;
+    }).join('');
+    window._gbooksItems = items;
+  }catch(e){
+    resultsEl.innerHTML = '<div class="gbooks-item">Error al buscar. Intenta de nuevo.</div>';
+  }
+}
+
+function seleccionarGoogleBook(i){
+  const info = window._gbooksItems[i].volumeInfo || {};
+  document.getElementById('libro-titulo').value = info.title || '';
+  document.getElementById('libro-autor').value = (info.authors||[]).join(', ');
+  document.getElementById('libro-editorial').value = info.publisher || '';
+  document.getElementById('libro-anio').value = info.publishedDate ? info.publishedDate.slice(0,4) : '';
+  document.getElementById('libro-paginas').value = info.pageCount || '';
+  document.getElementById('libro-genero').value = (info.categories||[])[0] || '';
+  let img = '';
+  if(info.imageLinks){
+    img = (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || '').replace('http://','https://').replace('zoom=1','zoom=2');
+  }
+  document.getElementById('libro-portada-url').value = img;
+  actualizarPreviewPortada();
+  document.getElementById('gbooks-results').classList.remove('show');
+  toast('Datos completados desde Google Books');
+}
+
+function actualizarPreviewPortada(){
+  const url = document.getElementById('libro-portada-url').value.trim();
+  const el = document.getElementById('cover-preview');
+  if(url){
+    el.innerHTML = `<img src="${url}" onerror="this.parentElement.innerHTML='<span class=ph>No se pudo cargar la imagen</span>'">`;
+  } else {
+    el.innerHTML = '<span class="ph">Sin portada — búscala arriba o pega una URL</span>';
+  }
+}
+
+// ===== MODAL AGREGAR/EDITAR =====
+function abrirModalNuevo(){
+  libroEditandoId = null;
+  pdfFileSeleccionado = null;
+  document.getElementById('modal-titulo').textContent = 'Agregar libro';
+  document.getElementById('btn-eliminar-libro').style.display = 'none';
+  ['libro-titulo','libro-autor','libro-editorial','libro-anio','libro-paginas','libro-genero','libro-portada-url','gbooks-query'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('gbooks-results').classList.remove('show');
+  document.getElementById('pdf-zone-text').textContent = 'Clic para elegir un PDF';
+  document.getElementById('pdf-drop-zone').classList.remove('has-file');
+  document.getElementById('pdf-drop-zone').dataset.pdfId = '';
+  document.getElementById('pdf-drop-zone').dataset.pdfNombre = '';
+  document.getElementById('upload-progress').classList.remove('show');
+  actualizarPreviewPortada();
+  document.getElementById('modal-libro').classList.add('open');
+}
+
+function abrirModalEditar(libro){
+  libroEditandoId = libro.id;
+  pdfFileSeleccionado = null;
+  document.getElementById('modal-titulo').textContent = 'Editar libro';
+  document.getElementById('btn-eliminar-libro').style.display = 'inline-block';
+  document.getElementById('libro-titulo').value = libro.titulo || '';
+  document.getElementById('libro-autor').value = libro.autor || '';
+  document.getElementById('libro-editorial').value = libro.editorial || '';
+  document.getElementById('libro-anio').value = libro.anio || '';
+  document.getElementById('libro-paginas').value = libro.paginas || '';
+  document.getElementById('libro-genero').value = libro.genero || '';
+  document.getElementById('libro-portada-url').value = libro.portada || '';
+  document.getElementById('gbooks-query').value = '';
+  document.getElementById('gbooks-results').classList.remove('show');
+  const zone = document.getElementById('pdf-drop-zone');
+  if(libro.pdfId){
+    zone.classList.add('has-file');
+    document.getElementById('pdf-zone-text').textContent = '📄 ' + (libro.pdfNombre || 'PDF cargado') + ' — clic para reemplazar';
+    zone.dataset.pdfId = libro.pdfId;
+    zone.dataset.pdfNombre = libro.pdfNombre || '';
+  } else {
+    zone.classList.remove('has-file');
+    document.getElementById('pdf-zone-text').textContent = 'Clic para elegir un PDF';
+    zone.dataset.pdfId = '';
+  }
+  document.getElementById('upload-progress').classList.remove('show');
+  actualizarPreviewPortada();
+  document.getElementById('modal-libro').classList.add('open');
+}
+
+function cerrarModal(){
+  document.getElementById('modal-libro').classList.remove('open');
+}
+
+function onPdfSeleccionado(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(file.type !== 'application/pdf'){ toast('Solo se permiten archivos PDF'); return; }
+  pdfFileSeleccionado = file;
+  document.getElementById('pdf-zone-text').textContent = '📄 ' + file.name + ' (nuevo, listo para subir)';
+  document.getElementById('pdf-drop-zone').classList.add('has-file');
+}
+
+async function guardarLibro(){
+  const titulo = document.getElementById('libro-titulo').value.trim();
+  if(!titulo){ toast('El título es obligatorio'); return; }
+
+  const datos = {
+    titulo,
+    autor: document.getElementById('libro-autor').value.trim(),
+    editorial: document.getElementById('libro-editorial').value.trim(),
+    anio: parseInt(document.getElementById('libro-anio').value) || null,
+    paginas: parseInt(document.getElementById('libro-paginas').value) || null,
+    genero: document.getElementById('libro-genero').value.trim(),
+    portada: document.getElementById('libro-portada-url').value.trim(),
+  };
+
+  const zone = document.getElementById('pdf-drop-zone');
+  if(zone.dataset.pdfId){
+    datos.pdfId = zone.dataset.pdfId;
+    datos.pdfNombre = zone.dataset.pdfNombre;
+  }
+
+  try{
+    if(pdfFileSeleccionado){
+      const subido = await subirPdfADrive(pdfFileSeleccionado);
+      if(subido && subido.id){
+        datos.pdfId = subido.id;
+        datos.pdfNombre = subido.name || pdfFileSeleccionado.name;
+      }
+    }
+
+    if(libroEditandoId){
+      await window._fb.updateDoc(window._fb.doc(window._db, 'libros', libroEditandoId), datos);
+      toast('Libro actualizado');
+    } else {
+      datos.creado = window._fb.serverTimestamp();
+      await window._fb.addDoc(window._fb.collection(window._db, 'libros'), datos);
+      toast('Libro agregado');
+    }
+    cerrarModal();
+  }catch(e){
+    console.error(e);
+    toast('Error al guardar el libro');
+  }
+}
+
+async function subirPdfADrive(file){
+  const progressBar = document.getElementById('upload-progress');
+  const fill = document.getElementById('upload-progress-fill');
+  progressBar.classList.add('show');
+  fill.style.width = '15%';
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('filename', file.name);
+
+  fill.style.width = '50%';
+
+  const res = await fetch(window._WORKER_URL + '/upload', {
+    method: 'POST',
+    body: formData
+  });
+
+  fill.style.width = '90%';
+  const data = await res.json();
+  fill.style.width = '100%';
+  setTimeout(()=>progressBar.classList.remove('show'), 600);
+
+  if(!data.id){
+    throw new Error('No se pudo subir el PDF: ' + JSON.stringify(data));
+  }
+  return data;
+}
+
+async function eliminarLibro(){
+  if(!libroEditandoId) return;
+  if(!confirm('¿Eliminar este libro de tu biblioteca? Esta acción no se puede deshacer.')) return;
+  try{
+    await window._fb.deleteDoc(window._fb.doc(window._db, 'libros', libroEditandoId));
+    toast('Libro eliminado');
+    cerrarModal();
+  }catch(e){
+    console.error(e);
+    toast('Error al eliminar');
+  }
+}
+
+// ===== MODAL DETALLE =====
+function abrirDetalle(id){
+  const libro = libros.find(l => l.id === id);
+  if(!libro) return;
+  document.getElementById('detalle-titulo').textContent = libro.titulo || 'Sin título';
+  document.getElementById('detalle-portada').src = libro.portada || '';
+  document.getElementById('detalle-portada').style.display = libro.portada ? 'block' : 'none';
+  document.getElementById('detalle-autor').textContent = libro.autor || '—';
+  document.getElementById('detalle-editorial').textContent = libro.editorial || '—';
+  document.getElementById('detalle-anio').textContent = libro.anio || '—';
+  document.getElementById('detalle-paginas').textContent = libro.paginas ? libro.paginas + ' páginas' : '—';
+  document.getElementById('detalle-genero').textContent = libro.genero || '—';
+
+  const pdfActions = document.getElementById('detalle-pdf-actions');
+  if(libro.pdfId){
+    pdfActions.innerHTML = `
+      <a class="btn-pdf" href="https://drive.google.com/file/d/${libro.pdfId}/view" target="_blank">📖 Leer PDF</a>
+      <a class="btn-pdf" href="https://drive.google.com/uc?export=download&id=${libro.pdfId}" target="_blank">⬇ Descargar</a>
+    `;
+  } else {
+    pdfActions.innerHTML = '';
+  }
+
+  document.getElementById('modal-detalle').dataset.libroId = id;
+  document.getElementById('modal-detalle').classList.add('open');
+}
+
+function cerrarDetalle(){
+  document.getElementById('modal-detalle').classList.remove('open');
+}
+
+function editarDesdeDetalle(){
+  const id = document.getElementById('modal-detalle').dataset.libroId;
+  const libro = libros.find(l => l.id === id);
+  cerrarDetalle();
+  if(libro) abrirModalEditar(libro);
+}
+
+// cerrar modales al hacer clic fuera
+document.querySelectorAll('.modal-overlay').forEach(overlay=>{
+  overlay.addEventListener('click', e=>{
+    if(e.target === overlay) overlay.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>

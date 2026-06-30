@@ -499,6 +499,7 @@ let libroEditandoId = null;
 let pdfFileSeleccionado = null;
 let gbooksSeleccionado = null;
 let _snapshotFormulario = '';
+const GOOGLE_BOOKS_API_KEY = 'AIzaSyBhOkFsrpnFAL1JZZpgt8ywgK9H-1E6DgU';
 
 function toast(msg){
   const t = document.getElementById('toast');
@@ -626,7 +627,7 @@ async function buscarGoogleBooks(){
   resultsEl.innerHTML = '<div class="gbooks-item">Buscando...</div>';
   resultsEl.classList.add('show');
   try{
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=8`);
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=8&key=${GOOGLE_BOOKS_API_KEY}`);
     const data = await res.json();
     const items = data.items || [];
     if(items.length === 0){

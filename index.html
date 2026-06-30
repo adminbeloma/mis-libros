@@ -128,6 +128,17 @@
     position:absolute;top:8px;right:8px;background:var(--spine);color:#fff;font-size:10px;
     font-weight:700;padding:3px 7px;border-radius:2px;letter-spacing:.05em;
   }
+  .delete-card-btn{
+    position:absolute;top:8px;left:8px;width:28px;height:28px;border-radius:50%;
+    background:rgba(43,36,32,.75);color:#fff;border:none;cursor:pointer;font-size:14px;
+    display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s, background .15s;
+    z-index:2;
+  }
+  .book-card:hover .delete-card-btn{opacity:1;}
+  .delete-card-btn:hover{background:#9B3A2B;}
+  @media(hover:none){
+    .delete-card-btn{opacity:.85;}
+  }
   .book-info{padding:12px 12px 14px;}
   .book-title{font-family:'Fraunces',serif;font-size:14.5px;font-weight:600;line-height:1.25;margin:0 0 4px;
     color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
@@ -235,8 +246,32 @@
     .form-grid{grid-template-columns:1fr;}
     .detail-grid{grid-template-columns:1fr;}
     .detail-cover{max-width:160px;margin:0 auto;}
-    main{padding:18px;}
-    header.topbar{padding:14px 18px;}
+    main{padding:14px;}
+    header.topbar{padding:14px 16px;}
+    .brand h1{font-size:17px;}
+    .who{display:none;}
+    .topbar-actions{gap:8px;}
+    .btn-add{padding:9px 14px;font-size:13px;}
+    .btn-ghost{padding:8px 12px;font-size:12px;}
+    .toolbar{gap:10px;}
+    .search-wrap{flex:1 1 100%;}
+    select.filter{flex:1;min-width:0;}
+    .count-pill{width:100%;text-align:right;}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px;}
+    .book-title{font-size:13px;}
+    .book-author{font-size:11px;}
+    .modal-box{max-height:92vh;}
+    .modal-body{padding:18px;}
+    .modal-header{padding:18px;}
+    .modal-footer{padding:16px 18px;flex-direction:column-reverse;gap:10px;}
+    .footer-right{width:100%;display:flex;gap:8px;}
+    .footer-right button{flex:1;}
+    .btn-danger{width:100%;}
+    .search-google-row{flex-direction:column;}
+    .login-box{padding:36px 24px;}
+  }
+  @media(max-width:380px){
+    .grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;}
   }
 </style>
 </head>
@@ -327,9 +362,14 @@
         <div class="field-sm full">
           <label>Portada</label>
           <div class="cover-preview" id="cover-preview">
-            <span class="ph">Sin portada — búscala arriba o pega una URL</span>
+            <span class="ph">Sin portada — búscala arriba, sube una imagen o pega una URL</span>
           </div>
-          <input type="text" id="libro-portada-url" placeholder="URL de la portada" style="margin-top:8px;" oninput="actualizarPreviewPortada()">
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <input type="text" id="libro-portada-url" placeholder="URL de la portada" style="flex:1;" oninput="actualizarPreviewPortada()">
+            <button class="btn-search" type="button" onclick="document.getElementById('portada-file-input').click()">Subir imagen</button>
+          </div>
+          <input type="file" id="portada-file-input" accept="image/*" style="display:none;" onchange="onPortadaFileSeleccionada(event)">
+          <div class="progress-bar" id="upload-portada-progress"><div class="fill" id="upload-portada-progress-fill"></div></div>
         </div>
 
         <div class="field-sm full">
@@ -360,6 +400,11 @@
         <div class="field-sm full">
           <label>Género</label>
           <input type="text" id="libro-genero" placeholder="Ficción, Historia, Negocios...">
+        </div>
+
+        <div class="field-sm full">
+          <label>Fecha de lectura (opcional)</label>
+          <input type="date" id="libro-fecha-lectura">
         </div>
 
         <div class="field-sm full">
@@ -399,6 +444,7 @@
           <dt>Año</dt><dd id="detalle-anio">—</dd>
           <dt>Páginas</dt><dd id="detalle-paginas">—</dd>
           <dt>Género</dt><dd id="detalle-genero">—</dd>
+          <dt>Fecha de lectura</dt><dd id="detalle-fecha-lectura">—</dd>
           <div class="pdf-actions" id="detalle-pdf-actions"></div>
         </dl>
       </div>
@@ -452,6 +498,7 @@ let libros = [];
 let libroEditandoId = null;
 let pdfFileSeleccionado = null;
 let gbooksSeleccionado = null;
+let _snapshotFormulario = '';
 
 function toast(msg){
   const t = document.getElementById('toast');
@@ -553,6 +600,7 @@ function renderLibros(){
       <div class="book-cover">
         ${l.portada ? `<img src="${l.portada}" alt="${escHtml(l.titulo)}" loading="lazy">` : `<span class="placeholder">${escHtml(l.titulo||'Sin título')}</span>`}
         ${l.pdfId ? '<span class="pdf-tag">PDF</span>' : ''}
+        <button class="delete-card-btn" title="Eliminar libro" onclick="eliminarLibroRapido(event,'${l.id}','${escHtml(l.titulo||'este libro').replace(/'/g,"\\'")}')">🗑</button>
       </div>
       <div class="book-info">
         <p class="book-title">${escHtml(l.titulo||'Sin título')}</p>
@@ -627,7 +675,42 @@ function actualizarPreviewPortada(){
   if(url){
     el.innerHTML = `<img src="${url}" onerror="this.parentElement.innerHTML='<span class=ph>No se pudo cargar la imagen</span>'">`;
   } else {
-    el.innerHTML = '<span class="ph">Sin portada — búscala arriba o pega una URL</span>';
+    el.innerHTML = '<span class="ph">Sin portada — búscala arriba, sube una imagen o pega una URL</span>';
+  }
+}
+
+async function onPortadaFileSeleccionada(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ toast('Solo se permiten imágenes'); return; }
+
+  const progressBar = document.getElementById('upload-portada-progress');
+  const fill = document.getElementById('upload-portada-progress-fill');
+  progressBar.classList.add('show');
+  fill.style.width = '20%';
+
+  try{
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('filename', file.name);
+    fill.style.width = '55%';
+
+    const res = await fetch(window._WORKER_URL + '/upload', { method: 'POST', body: formData });
+    fill.style.width = '90%';
+    const data = await res.json();
+    fill.style.width = '100%';
+    setTimeout(()=>progressBar.classList.remove('show'), 500);
+
+    if(!data.id){ throw new Error('No se pudo subir la imagen'); }
+
+    const urlPublica = `https://drive.google.com/uc?export=view&id=${data.id}`;
+    document.getElementById('libro-portada-url').value = urlPublica;
+    actualizarPreviewPortada();
+    toast('Portada subida correctamente');
+  }catch(err){
+    console.error(err);
+    progressBar.classList.remove('show');
+    toast('Error al subir la imagen');
   }
 }
 
@@ -637,7 +720,7 @@ function abrirModalNuevo(){
   pdfFileSeleccionado = null;
   document.getElementById('modal-titulo').textContent = 'Agregar libro';
   document.getElementById('btn-eliminar-libro').style.display = 'none';
-  ['libro-titulo','libro-autor','libro-editorial','libro-anio','libro-paginas','libro-genero','libro-portada-url','gbooks-query'].forEach(id=>{
+  ['libro-titulo','libro-autor','libro-editorial','libro-anio','libro-paginas','libro-genero','libro-portada-url','gbooks-query','libro-fecha-lectura'].forEach(id=>{
     document.getElementById(id).value = '';
   });
   document.getElementById('gbooks-results').classList.remove('show');
@@ -648,6 +731,7 @@ function abrirModalNuevo(){
   document.getElementById('upload-progress').classList.remove('show');
   actualizarPreviewPortada();
   document.getElementById('modal-libro').classList.add('open');
+  _snapshotFormulario = capturarSnapshotFormulario();
 }
 
 function abrirModalEditar(libro){
@@ -661,6 +745,7 @@ function abrirModalEditar(libro){
   document.getElementById('libro-anio').value = libro.anio || '';
   document.getElementById('libro-paginas').value = libro.paginas || '';
   document.getElementById('libro-genero').value = libro.genero || '';
+  document.getElementById('libro-fecha-lectura').value = libro.fechaLectura || '';
   document.getElementById('libro-portada-url').value = libro.portada || '';
   document.getElementById('gbooks-query').value = '';
   document.getElementById('gbooks-results').classList.remove('show');
@@ -678,9 +763,36 @@ function abrirModalEditar(libro){
   document.getElementById('upload-progress').classList.remove('show');
   actualizarPreviewPortada();
   document.getElementById('modal-libro').classList.add('open');
+  _snapshotFormulario = capturarSnapshotFormulario();
+}
+
+function capturarSnapshotFormulario(){
+  return JSON.stringify({
+    titulo: document.getElementById('libro-titulo').value,
+    autor: document.getElementById('libro-autor').value,
+    editorial: document.getElementById('libro-editorial').value,
+    anio: document.getElementById('libro-anio').value,
+    paginas: document.getElementById('libro-paginas').value,
+    genero: document.getElementById('libro-genero').value,
+    fechaLectura: document.getElementById('libro-fecha-lectura').value,
+    portada: document.getElementById('libro-portada-url').value,
+    pdfId: document.getElementById('pdf-drop-zone').dataset.pdfId || '',
+    pdfNuevo: !!pdfFileSeleccionado,
+  });
+}
+
+function hayCambiosSinGuardar(){
+  return capturarSnapshotFormulario() !== _snapshotFormulario;
 }
 
 function cerrarModal(){
+  if(hayCambiosSinGuardar()){
+    if(!confirm('Tienes cambios sin guardar. ¿Quieres salir sin guardarlos?')) return;
+  }
+  document.getElementById('modal-libro').classList.remove('open');
+}
+
+function cerrarModalForzado(){
   document.getElementById('modal-libro').classList.remove('open');
 }
 
@@ -704,6 +816,7 @@ async function guardarLibro(){
     anio: parseInt(document.getElementById('libro-anio').value) || null,
     paginas: parseInt(document.getElementById('libro-paginas').value) || null,
     genero: document.getElementById('libro-genero').value.trim(),
+    fechaLectura: document.getElementById('libro-fecha-lectura').value || null,
     portada: document.getElementById('libro-portada-url').value.trim(),
   };
 
@@ -730,7 +843,7 @@ async function guardarLibro(){
       await window._fb.addDoc(window._fb.collection(window._db, 'libros'), datos);
       toast('Libro agregado');
     }
-    cerrarModal();
+    cerrarModalForzado();
   }catch(e){
     console.error(e);
     toast('Error al guardar el libro');
@@ -765,13 +878,25 @@ async function subirPdfADrive(file){
   return data;
 }
 
+async function eliminarLibroRapido(event, id, titulo){
+  event.stopPropagation(); // evita que se abra el detalle al hacer clic en la basurita
+  if(!confirm(`¿Eliminar "${titulo}" de tu biblioteca? Esta acción no se puede deshacer.`)) return;
+  try{
+    await window._fb.deleteDoc(window._fb.doc(window._db, 'libros', id));
+    toast('Libro eliminado');
+  }catch(e){
+    console.error(e);
+    toast('Error al eliminar');
+  }
+}
+
 async function eliminarLibro(){
   if(!libroEditandoId) return;
   if(!confirm('¿Eliminar este libro de tu biblioteca? Esta acción no se puede deshacer.')) return;
   try{
     await window._fb.deleteDoc(window._fb.doc(window._db, 'libros', libroEditandoId));
     toast('Libro eliminado');
-    cerrarModal();
+    cerrarModalForzado();
   }catch(e){
     console.error(e);
     toast('Error al eliminar');
@@ -790,6 +915,9 @@ function abrirDetalle(id){
   document.getElementById('detalle-anio').textContent = libro.anio || '—';
   document.getElementById('detalle-paginas').textContent = libro.paginas ? libro.paginas + ' páginas' : '—';
   document.getElementById('detalle-genero').textContent = libro.genero || '—';
+  document.getElementById('detalle-fecha-lectura').textContent = libro.fechaLectura
+    ? new Date(libro.fechaLectura + 'T00:00:00').toLocaleDateString('es-MX', {year:'numeric', month:'long', day:'numeric'})
+    : '—';
 
   const pdfActions = document.getElementById('detalle-pdf-actions');
   if(libro.pdfId){
@@ -816,12 +944,7 @@ function editarDesdeDetalle(){
   if(libro) abrirModalEditar(libro);
 }
 
-// cerrar modales al hacer clic fuera
-document.querySelectorAll('.modal-overlay').forEach(overlay=>{
-  overlay.addEventListener('click', e=>{
-    if(e.target === overlay) overlay.classList.remove('open');
-  });
-});
+// Los modales solo se cierran con la X (o el botón Cancelar), nunca al hacer clic afuera.
 </script>
 </body>
 </html>
